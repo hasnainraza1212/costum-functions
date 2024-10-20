@@ -1,0 +1,77 @@
+import React, { useState, useCallback, useEffect } from 'react';
+import axios from 'axios';
+import { debounce } from 'lodash';
+import { Command } from 'cmdk';
+import { TextField, CircularProgress, List, ListItem } from '@mui/material';
+const CustomSearch = ()=>{
+  const [searchTerm, setSearchTerm] = useState('');
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
+const fetchData =async (query)=>{
+  try {
+
+    setLoading(true)
+    const response = await axios.get("http://localhost:5000/search",{
+     params: {title:query}
+    })
+    if (Array.isArray(response?.data?.movies)){
+      setItems(response.data.movies)
+    }else{
+      setItems([])
+    }
+  } catch (error) {
+    console.error(error.message)
+    throw new Error(error.message)
+  }finally{
+    setLoading(false)
+  }
+}
+
+const debounceDataFetch=useCallback(debounce((query)=>{query?.trim() && fetchData(query)},300), [])
+
+const handleInput=(e)=>{
+  const {value="", name=""} = e.target
+  setSearchTerm(value)
+  if (value){
+    debounceDataFetch(value)
+  }else{
+    setItems([])
+  }
+}
+
+  return (
+    <div style={{ width: '300px', margin: '0 auto', padding:"50px" }}>
+      <TextField  
+        fullWidth
+        label="Search"        
+        variant="outlined"
+        name="search"
+        value={searchTerm}
+        onChange={handleInput}
+
+        InputProps={{
+          endAdornment: loading && <CircularProgress size={24} />,
+        }}
+      />
+      <Command>
+        <Command.List>
+          {loading && <ListItem>Loading...</ListItem>}
+          {!loading && items.length === 0 && searchTerm && (
+            <ListItem>No results found</ListItem>
+          )}
+          {!loading && Array.isArray(items) && items.map((item) => (
+            <Command.Item key={item?._id}>
+              {
+                console.log(item?.title)
+              }
+              <ListItem button>{item?.title}</ListItem>
+            </Command.Item>
+          ))}
+        </Command.List>
+      </Command>
+    </div>
+  );
+};
+
+
+export default CustomSearch
